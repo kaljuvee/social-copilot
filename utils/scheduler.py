@@ -7,7 +7,7 @@ import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 import streamlit as st
-from utils.database import get_post_by_id, update_post_status, get_scheduled_posts, add_to_queue, get_queue_items, update_queue_status
+from utils.database import get_post_by_id, update_post_status, get_scheduled_posts, add_to_queue, get_queue_items, update_queue_status, DATABASE_PATH
 from utils.api_clients import post_to_single_platform, get_rate_limit_delay
 
 # Global scheduler instance
@@ -169,7 +169,7 @@ def check_post_completion(post_id: int):
         import sqlite3
         
         # Check queue status for all platforms of this post
-        conn = sqlite3.connect('social_media_posts.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         
         c.execute("""
@@ -262,7 +262,4 @@ def resume_scheduler():
     if scheduler:
         scheduler.resume()
 
-# Ensure scheduler starts when module is imported
-if 'scheduler_started' not in st.session_state:
-    st.session_state.scheduler_started = True
-    start_scheduler()
+# Note: Scheduler is started explicitly by the app entrypoint (Home.py)
