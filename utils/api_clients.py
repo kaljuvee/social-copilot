@@ -1,8 +1,9 @@
 import requests
 import json
 import time
+import os
 from typing import Dict, List, Tuple, Optional
-from database import get_api_credentials, add_to_queue
+from utils.database import get_api_credentials, add_to_queue
 import streamlit as st
 
 # Character limits for each platform
@@ -26,15 +27,67 @@ class APIClient:
         self.platform = platform
         self.credentials = self._load_credentials()
     
+    def _env_credentials_for_platform(self) -> Dict[str, str]:
+        """Load credentials for this platform from environment variables.
+        These act as defaults and may be overridden by values in the DB.
+        """
+        platform_env_map: Dict[str, Dict[str, str]] = {
+            "Facebook": {
+                "app_id": "FACEBOOK_APP_ID",
+                "app_secret": "FACEBOOK_APP_SECRET",
+                "access_token": "FACEBOOK_ACCESS_TOKEN",
+            },
+            "Threads": {
+                "app_id": "THREADS_APP_ID",
+                "app_secret": "THREADS_APP_SECRET",
+                "access_token": "THREADS_ACCESS_TOKEN",
+            },
+            "X (Twitter)": {
+                "api_key": "TWITTER_API_KEY",
+                "api_secret": "TWITTER_API_SECRET",
+                "access_token": "TWITTER_ACCESS_TOKEN",
+                "access_token_secret": "TWITTER_ACCESS_TOKEN_SECRET",
+                "bearer_token": "TWITTER_BEARER_TOKEN",
+            },
+            "LinkedIn": {
+                "client_id": "LINKEDIN_CLIENT_ID",
+                "client_secret": "LINKEDIN_CLIENT_SECRET",
+                "access_token": "LINKEDIN_ACCESS_TOKEN",
+                "person_urn": "LINKEDIN_PERSON_URN",
+            },
+            "BlueSky": {
+                "username": "BLUESKY_USERNAME",
+                "password": "BLUESKY_PASSWORD",
+            },
+            "Mastodon": {
+                "instance_url": "MASTODON_INSTANCE_URL",
+                "access_token": "MASTODON_ACCESS_TOKEN",
+            },
+        }
+        env_mapping = platform_env_map.get(self.platform, {})
+        env_creds: Dict[str, str] = {}
+        for key, env_name in env_mapping.items():
+            value = os.getenv(env_name)
+            if value:
+                env_creds[key] = value
+        return env_creds
+
     def _load_credentials(self) -> Optional[Dict]:
-        """Load credentials from database"""
+        """Load credentials with precedence: env defaults, overridden by DB settings"""
+        # Start with environment-provided defaults
+        combined_creds: Dict[str, str] = self._env_credentials_for_platform()
+
+        # Merge any DB-provided overrides on top
         creds_json = get_api_credentials(self.platform)
         if creds_json:
             try:
-                return json.loads(creds_json)
+                db_creds = json.loads(creds_json)
+                if isinstance(db_creds, dict):
+                    combined_creds.update({k: v for k, v in db_creds.items() if v is not None and v != ""})
             except json.JSONDecodeError:
-                return None
-        return None
+                pass
+
+        return combined_creds if combined_creds else None
     
     def post(self, content: str) -> Tuple[bool, Optional[str]]:
         """Post content to platform - to be implemented by subclasses"""

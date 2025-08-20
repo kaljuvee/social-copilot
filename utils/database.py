@@ -2,8 +2,9 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 from typing import Optional, List
+import os
 
-DATABASE_PATH = 'social_media_posts.db'
+DATABASE_PATH = os.getenv('DATABASE_PATH', 'social_media_posts.db')
 
 def init_database():
     """Initialize SQLite database with required tables"""

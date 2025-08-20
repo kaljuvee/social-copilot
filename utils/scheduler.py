@@ -3,15 +3,16 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 import pytz
+import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 import streamlit as st
-from database import get_post_by_id, update_post_status, get_scheduled_posts, add_to_queue, get_queue_items, update_queue_status
-from api_clients import post_to_single_platform, get_rate_limit_delay
+from utils.database import get_post_by_id, update_post_status, get_scheduled_posts, add_to_queue, get_queue_items, update_queue_status
+from utils.api_clients import post_to_single_platform, get_rate_limit_delay
 
 # Global scheduler instance
 scheduler = None
-TALLINN_TZ = pytz.timezone('Europe/Tallinn')
+TALLINN_TZ = pytz.timezone(os.getenv('TIMEZONE', 'Europe/Tallinn'))
 
 def start_scheduler():
     """Initialize and start the background scheduler"""
@@ -164,7 +165,7 @@ def process_platform_queue(platform: str):
 def check_post_completion(post_id: int):
     """Check if all platforms for a post have completed and update post status"""
     try:
-        from database import get_queue_items
+        from utils.database import get_queue_items
         import sqlite3
         
         # Check queue status for all platforms of this post
